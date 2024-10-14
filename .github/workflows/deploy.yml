@@ -1,0 +1,80 @@
+name: CI/CD Deployment
+
+
+
+
+on:
+  push:
+    branches:
+      - main
+
+
+
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+
+
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+
+
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+
+
+
+    - name: Build Docker images
+      run: |
+        docker build -t register-app .
+        docker build -t register-app-logger -f Dockerfile.logger .
+
+
+
+
+    - name: Install Kind
+      run: |
+        curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+        chmod +x ./kind
+        sudo mv ./kind /usr/local/bin/kind
+
+
+
+
+    - name: Create Kind cluster
+      run: |
+        kind create cluster --name ci-cluster
+
+
+
+
+    - name: Set up kubectl context
+      run: |
+        export KUBECONFIG="$(kind get kubeconfig-path --name="ci-cluster")"
+        kubectl config get-contexts
+        kubectl cluster-info
+
+
+
+
+    - name: Load Docker images into Kind
+      run: |
+        kind load docker-image register-app --name ci-cluster
+        kind load docker-image register-app-logger --name ci-cluster
+
+
+
+
+    - name: Deploy to Kind
+      run: |
+        kubectl apply -f register-app-deployment.yaml
+        kubectl apply -f register-app-service.yaml
+        kubectl get pods
+        kubectl get services

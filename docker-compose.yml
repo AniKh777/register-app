@@ -1,0 +1,18 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./db_data:/app/db_data
+    depends_on:
+      - logger
+  logger:
+    build:
+      context: .
+      dockerfile: Dockerfile.logger
+    ports:
+      - "5001:5001"
